@@ -1,6 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shopping/bloc/shoppinglist_bloc.dart';
 import 'package:shopping/data/categories.dart';
 import 'package:shopping/data/dummy_items.dart';
 import 'package:shopping/models/category.dart';
@@ -9,7 +11,7 @@ import 'package:shopping/models/grocery_item.dart';
 import 'package:http/http.dart' as http;
 
 class NewItem extends StatefulWidget {
-  NewItem({super.key});
+  const NewItem({super.key});
   @override
   State<NewItem> createState() {
     return _NewItemState();
@@ -21,7 +23,7 @@ class _NewItemState extends State<NewItem> {
 
   String name = '';
   int quantity = 1;
-  Category? category = null;
+  Category? category;
 
   final formkey = GlobalKey<FormState>();
 
@@ -29,37 +31,11 @@ class _NewItemState extends State<NewItem> {
     bool isValid = formkey.currentState!.validate();
     print('valid? $isValid');
     if (isValid) {
-      setState(() {
-        isSending = true;
-      });
-
       formkey.currentState!.save();
-      final url = Uri.https(
-        'shoppinglist-c8dd5-default-rtdb.firebaseio.com',
-        'shopping-list.json',
+      context.read<ShoppinglistBloc>().add(
+        addItemEvent(name, quantity, category!),
       );
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'name': name,
-          'quantity': quantity,
-          'category': category!.name,
-        }),
-      );
-      print(response.statusCode);
-      print(
-        'name $name quantity ${quantity.toString()} category ${category!.name}',
-      );
-      final Map<String, dynamic> responseData = json.decode(response.body);
-      Navigator.of(context).pop(
-        GroceryItem(
-          id: responseData['name'],
-          name: name,
-          quantity: quantity,
-          category: category!,
-        ),
-      );
+      Navigator.of(context).pop();
     }
   }
 
@@ -89,10 +65,11 @@ class _NewItemState extends State<NewItem> {
                         //validator is only for textFORMfield
                         if (value == null ||
                             value.isEmpty ||
-                            value.trim().length < 3)
+                            value.trim().length < 3) {
                           return 'Must be between 3-50 characters';
-                        else
+                        } else {
                           return null;
+                        }
                       },
                     ),
                     Row(
@@ -112,8 +89,11 @@ class _NewItemState extends State<NewItem> {
                               if (value == null ||
                                   value.isEmpty ||
                                   int.tryParse(value) == null ||
-                                  int.tryParse(value)! < 1)
+                                  int.tryParse(value)! < 1) {
                                 return 'Must be a positive whole number';
+                                return null;
+                              }
+                              return null;
                             },
                           ),
                         ),
@@ -122,6 +102,7 @@ class _NewItemState extends State<NewItem> {
                         ),
                         Expanded(
                           child: DropdownButtonFormField(
+                            initialValue: categories[Categories.other],
                             items: [
                               for (final category in categories.entries)
                                 DropdownMenuItem(
