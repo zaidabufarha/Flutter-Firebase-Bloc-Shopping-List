@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shopping/bloc/shoppinglist_bloc.dart';
 import 'package:shopping/grocery_list.dart';
+import 'package:shopping/helpers/my_bloc_observer.dart';
 
 void main() {
+  Bloc.observer = MyBlocObserver();
   runApp(const MyApp());
 }
 
