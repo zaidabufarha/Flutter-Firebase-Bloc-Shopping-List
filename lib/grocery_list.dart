@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shopping/bloc/shop2/shop2_bloc.dart';
 import 'package:shopping/bloc/shoppinglist_bloc.dart';
 import 'package:shopping/data/categories.dart';
 import 'package:shopping/models/category.dart';
@@ -29,13 +30,13 @@ class _GroceryListState extends State<GroceryList> {
 
   void onScroll() {
     if (scrollController.position.pixels >=
-        scrollController.position.maxScrollExtent - 100) {
+        scrollController.position.maxScrollExtent - 200) {
       print('scrolled to end now loading more');
-      final currentState = context.read<ShoppinglistBloc>().state;
-      if (currentState is ShoppinglistLoaded) {
+      final currentState = context.read<Shop2Bloc>().state;
+      if (currentState is Loaded) {
         if (currentState.hasReachedMax) return;
       }
-      context.read<ShoppinglistBloc>().add(fetchListEvent());
+      context.read<Shop2Bloc>().add(Shop2Event.fetchList());
     }
   }
 
@@ -46,7 +47,7 @@ class _GroceryListState extends State<GroceryList> {
   }
 
   void Delete(GroceryItem item) async {
-    context.read<ShoppinglistBloc>().add(deleteItemEvent(item));
+    context.read<Shop2Bloc>().add(Shop2Event.deleteItem(item));
   }
 
   void addItem() {
@@ -67,23 +68,12 @@ class _GroceryListState extends State<GroceryList> {
           ),
         ],
       ),
-      body: BlocBuilder<ShoppinglistBloc, ShoppinglistState>(
+      body: BlocBuilder<Shop2Bloc, Shop2State>(
+        //listener + whenornull works
         builder: (context, state) {
-          if (state is ShoppinglistLoading) {
-            return Center(child: CircularProgressIndicator());
-          } else if (state is ShoppinglistError) {
-            return Padding(
-              padding: const EdgeInsets.all(10),
-              child: Center(
-                child: Text(
-                  state.message,
-                  style: TextStyle(fontSize: 50),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            );
-          } else if (state is ShoppinglistLoaded) {
-            return (state.list.isEmpty)
+          return state.when(
+            loading: () => Center(child: CircularProgressIndicator()),
+            loaded: (list, hasReachedMax) => (list.isEmpty)
                 ? Padding(
                     padding: const EdgeInsets.all(10),
                     child: Center(
@@ -96,22 +86,28 @@ class _GroceryListState extends State<GroceryList> {
                   )
                 : ListView.builder(
                     controller: scrollController,
-                    itemCount: (state.hasReachedMax)
-                        ? state.list.length
-                        : state.list.length + 1,
-                    itemBuilder: (ctx, index) => (index == state.list.length)
+                    itemCount: (hasReachedMax) ? list.length : list.length + 1,
+                    itemBuilder: (ctx, index) => (index == list.length)
                         ? Center(child: CircularProgressIndicator())
                         : Dismissible(
-                            key: ValueKey(state.list[index].id),
-                            child: Listing(state.list[index]),
+                            key: ValueKey(list[index].id),
+                            child: Listing(list[index]),
                             onDismissed: (direction) {
-                              Delete(state.list[index]);
+                              Delete(list[index]);
                             },
                           ),
-                  );
-          } else {
-            return SizedBox();
-          }
+                  ),
+            error: (message) => Padding(
+              padding: const EdgeInsets.all(10),
+              child: Center(
+                child: Text(
+                  message,
+                  style: TextStyle(fontSize: 50),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+          );
         },
       ),
     );

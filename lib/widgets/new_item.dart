@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shopping/bloc/shop2/shop2_bloc.dart';
 import 'package:shopping/bloc/shoppinglist_bloc.dart';
 import 'package:shopping/data/categories.dart';
 import 'package:shopping/data/dummy_items.dart';
@@ -32,8 +33,8 @@ class _NewItemState extends State<NewItem> {
     print('valid? $isValid');
     if (isValid) {
       formkey.currentState!.save();
-      context.read<ShoppinglistBloc>().add(
-        addItemEvent(name, quantity, category!),
+      context.read<Shop2Bloc>().add(
+        Shop2Event.addItem(name, quantity, category!),
       );
       Navigator.of(context).pop();
     }

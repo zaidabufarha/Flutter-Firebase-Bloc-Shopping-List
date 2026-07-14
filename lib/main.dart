@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shopping/bloc/shop2/shop2_bloc.dart';
 import 'package:shopping/bloc/shoppinglist_bloc.dart';
 import 'package:shopping/grocery_list.dart';
 import 'package:shopping/helpers/my_bloc_observer.dart';
@@ -16,7 +17,8 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) => ShoppinglistBloc()..add(fetchListEvent()),
+      //create: (context) => ShoppinglistBloc()..add(fetchListEvent()),
+      create: (context) => Shop2Bloc()..add(Shop2Event.fetchList()),
       child: MaterialApp(
         title: 'Flutter Groceries',
         theme: ThemeData.dark().copyWith(
