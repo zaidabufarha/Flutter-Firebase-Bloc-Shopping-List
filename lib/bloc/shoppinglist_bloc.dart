@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:shopping/api/api.dart';
 import 'package:shopping/data/categories.dart';
 import 'package:shopping/models/category.dart';
 import 'package:shopping/models/grocery_item.dart';
@@ -12,54 +13,79 @@ part 'shoppinglist_event.dart';
 part 'shoppinglist_state.dart';
 
 class ShoppinglistBloc extends Bloc<ShoppinglistEvent, ShoppinglistState> {
+  bool fetching = false;
+  String? lastItemId;
   ShoppinglistBloc() : super(ShoppinglistLoading()) {
     on<fetchListEvent>((event, emit) async {
-      //if check for event is unneccessary
-      emit(ShoppinglistLoading());
+      if (state is ShoppinglistLoaded) {
+        final currentState = state as ShoppinglistLoaded;
+        if (currentState.hasReachedMax || fetching) return;
+        if (currentState.list.isNotEmpty) {
+          lastItemId = currentState.list.last.id;
+        }
+      }
+      fetching = true;
       // while it is initialized writing it here ensures that it works on future loads not just the first
-      final url = Uri.https(
-        'shoppinglist-c8dd5-default-rtdb.firebaseio.com',
-        'shopping-list.json',
-      );
-      String error = '';
+
+      List<GroceryItem>? loadedList;
       try {
-        var response = await http.get(url);
-
-        if (response.body == 'null') {
-          print('only see this if the database is empty');
-          error = 'No items in your shopping list yet, add some with +';
-          emit(ShoppinglistError(error));
-          return;
+        loadedList = await fetchFromDatabase(
+          lastItemId,
+        );
+      } catch (err) {
+        emit(ShoppinglistError('Something went wrong, error code: $err'));
+        return;
+      }
+      fetching = false;
+      if (loadedList == null) {
+        if (state is ShoppinglistLoaded) {
+          final currentState = state as ShoppinglistLoaded;
+          emit(currentState.copyWith(hasReachedMax: true));
+        } else {
+          emit(
+            ShoppinglistLoaded(list: [], hasReachedMax: false, startIndex: 0),
+          );
         }
-
-        if (response.statusCode >= 400) {
-          error = 'Failed to fetch data, try again later';
-          emit(ShoppinglistError(error));
-          return;
-        }
-        Map<String, dynamic> receivedData = json.decode(response.body);
-        List<GroceryItem> loadedList = [];
-
-        for (final item in receivedData.entries) {
-          Category category = categories.entries
-              .firstWhere(
-                (cat) => cat.value.name == item.value['category'],
-              )
-              .value;
-          loadedList.add(
-            GroceryItem(
-              id: item.key,
-              name: item.value['name'],
-              quantity: item.value['quantity'],
-              category: category,
+        return;
+      }
+      //if there wasnt a full load of 20
+      if (loadedList.length < 20) {
+        if (state is ShoppinglistLoaded) {
+          final currentState = state as ShoppinglistLoaded;
+          emit(
+            currentState.copyWith(
+              hasReachedMax: true,
+              list: [...currentState.list, ...loadedList],
+            ),
+          );
+        } else {
+          emit(
+            ShoppinglistLoaded(
+              list: loadedList,
+              startIndex: loadedList.length,
+              hasReachedMax: true,
             ),
           );
         }
-        emit(ShoppinglistLoaded(loadedList));
-      } catch (err) {
-        error = 'Something went wrong, error code: $err';
-        emit(ShoppinglistError(error));
-        return;
+      } else {
+        //full package
+        if (state is ShoppinglistLoaded) {
+          final currentState = state as ShoppinglistLoaded;
+          emit(
+            currentState.copyWith(
+              hasReachedMax: false,
+              list: [...currentState.list, ...loadedList],
+            ),
+          );
+        } else {
+          emit(
+            ShoppinglistLoaded(
+              list: loadedList,
+              startIndex: 20,
+              hasReachedMax: false,
+            ),
+          );
+        }
       }
     });
     on<deleteItemEvent>((event, emit) async {
@@ -74,7 +100,11 @@ class ShoppinglistBloc extends Bloc<ShoppinglistEvent, ShoppinglistState> {
             .where((i) => i != event.item)
             .toList();
         print('Successfully deleted ${event.item.name}');
-        emit(ShoppinglistLoaded(newList));
+        emit(
+          currentState.copyWith(
+            list: newList,
+          ),
+        );
       } else {
         return;
       }
@@ -107,7 +137,11 @@ class ShoppinglistBloc extends Bloc<ShoppinglistEvent, ShoppinglistState> {
       if (response.statusCode < 400 && state is ShoppinglistLoaded) {
         final currentState = state as ShoppinglistLoaded;
         List<GroceryItem> newList = [...currentState.list, newItem];
-        emit(ShoppinglistLoaded(newList));
+        emit(
+          currentState.copyWith(
+            list: newList,
+          ),
+        );
       }
     });
   }

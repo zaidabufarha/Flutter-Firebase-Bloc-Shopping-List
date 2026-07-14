@@ -18,6 +18,33 @@ class GroceryList extends StatefulWidget {
 }
 
 class _GroceryListState extends State<GroceryList> {
+  //controller to call for more items when scrolled far enough
+  final ScrollController scrollController = ScrollController();
+
+  @override
+  void initState() {
+    scrollController.addListener(onScroll);
+    super.initState();
+  }
+
+  void onScroll() {
+    if (scrollController.position.pixels >=
+        scrollController.position.maxScrollExtent - 100) {
+      print('scrolled to end now loading more');
+      final currentState = context.read<ShoppinglistBloc>().state;
+      if (currentState is ShoppinglistLoaded) {
+        if (currentState.hasReachedMax) return;
+      }
+      context.read<ShoppinglistBloc>().add(fetchListEvent());
+    }
+  }
+
+  @override
+  void dispose() {
+    scrollController.dispose();
+    super.dispose();
+  }
+
   void Delete(GroceryItem item) async {
     context.read<ShoppinglistBloc>().add(deleteItemEvent(item));
   }
@@ -68,6 +95,7 @@ class _GroceryListState extends State<GroceryList> {
                     ),
                   )
                 : ListView.builder(
+                    controller: scrollController,
                     itemCount: state.list.length,
                     itemBuilder: (ctx, index) => Dismissible(
                       key: ValueKey(state.list[index].id),

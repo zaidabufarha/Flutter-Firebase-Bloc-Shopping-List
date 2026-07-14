@@ -20,9 +20,25 @@ final class ShoppinglistError extends ShoppinglistState {
 
 final class ShoppinglistLoaded extends ShoppinglistState {
   final List<GroceryItem> list;
+  final bool hasReachedMax;
+  final int startIndex;
 
-  ShoppinglistLoaded(this.list);
+  const ShoppinglistLoaded({
+    required this.list,
+    this.hasReachedMax = false,
+    this.startIndex = 0,
+  });
+
+  ShoppinglistLoaded copyWith({
+    List<GroceryItem>? list,
+    bool? hasReachedMax,
+  }) {
+    return ShoppinglistLoaded(
+      list: list ?? this.list,
+      hasReachedMax: hasReachedMax ?? this.hasReachedMax,
+    );
+  }
 
   @override
-  List<Object> get props => [list];
+  List<Object> get props => [list, hasReachedMax];
 }
