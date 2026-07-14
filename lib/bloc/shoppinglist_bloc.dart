@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:bloc/bloc.dart';
+import 'package:bloc_concurrency/bloc_concurrency.dart';
 import 'package:equatable/equatable.dart';
 import 'package:shopping/api/api.dart';
 import 'package:shopping/data/categories.dart';
@@ -143,6 +144,10 @@ class ShoppinglistBloc extends Bloc<ShoppinglistEvent, ShoppinglistState> {
           ),
         );
       }
-    });
+    }, transformer: droppable());
+    // concurrent does everything together,
+    // sequential does them in turn,
+    // droppable ignores any event when an event is already proccessing,
+    // and restartable drops the current running event to start the new one
   }
 }

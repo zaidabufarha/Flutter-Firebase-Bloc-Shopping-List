@@ -96,14 +96,18 @@ class _GroceryListState extends State<GroceryList> {
                   )
                 : ListView.builder(
                     controller: scrollController,
-                    itemCount: state.list.length,
-                    itemBuilder: (ctx, index) => Dismissible(
-                      key: ValueKey(state.list[index].id),
-                      child: Listing(state.list[index]),
-                      onDismissed: (direction) {
-                        Delete(state.list[index]);
-                      },
-                    ),
+                    itemCount: (state.hasReachedMax)
+                        ? state.list.length
+                        : state.list.length + 1,
+                    itemBuilder: (ctx, index) => (index == state.list.length)
+                        ? Center(child: CircularProgressIndicator())
+                        : Dismissible(
+                            key: ValueKey(state.list[index].id),
+                            child: Listing(state.list[index]),
+                            onDismissed: (direction) {
+                              Delete(state.list[index]);
+                            },
+                          ),
                   );
           } else {
             return SizedBox();
